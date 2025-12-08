@@ -1,7 +1,7 @@
 # app.py
 from fastapi import FastAPI
 from pydantic import BaseModel
-
+from fastapi.middleware.cors import CORSMiddleware
 from summarizer import Summarizer
 from key_extractor import KeywordExtractor
 
@@ -10,6 +10,14 @@ app = FastAPI(
     description="APIs for summarizing text and extracting keywords",
     version="1.0.0"
 )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 summarizer = Summarizer()
 keyword_extractor = KeywordExtractor(top_k=10)
