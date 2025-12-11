@@ -1,87 +1,98 @@
 import { useState } from "react";
-import { summarizeText, extractKeywords } from "./api";
+import Header from "./components/Header";
+import TextInput from "./components/TextInput";
+import ActionButtons from "./components/ActionButtons";
+import SummaryBox from "./components/SummaryBox";
+import KeywordsBox from "./components/KeywordsBox";
+import ErrorAlert from "./components/ErrorAlert";
+import FileUploader from "./components/FileUploader";
+import { summarizeText, extractKeywords, uploadFile } from "./api";
 
-function App() {
+export default function App() {
   const [text, setText] = useState("");
   const [summary, setSummary] = useState("");
   const [keywords, setKeywords] = useState([]);
-  const [loadingSummary, setLoadingSummary] = useState(false);
-  const [loadingKeywords, setLoadingKeywords] = useState(false);
+  const [loading, setLoading] = useState({ summary: false, keywords: false });
+  const [error, setError] = useState("");
 
-  const handleSummarize = async () => {
-    if (!text.trim()) return;
-    setLoadingSummary(true);
-
-    const result = await summarizeText(text);
-    setSummary(result.summary);
-
-    setLoadingSummary(false);
+  const runSummarize = async (inputText = text) => {
+    if (!inputText.trim()) return;
+    setError("");
+    setLoading((s) => ({ ...s, summary: true }));
+    try {
+      const res = await summarizeText(inputText);
+      setSummary(res.summary || "");
+    } catch (err) {
+      setError(err.message || "Failed to summarize");
+    } finally {
+      setLoading((s) => ({ ...s, summary: false }));
+    }
   };
 
-  const handleKeywords = async () => {
-    if (!text.trim()) return;
-    setLoadingKeywords(true);
+  const runKeywords = async (inputText = text) => {
+    if (!inputText.trim()) return;
+    setError("");
+    setLoading((s) => ({ ...s, keywords: true }));
+    try {
+      const res = await extractKeywords(inputText);
+      setKeywords(res.keywords || []);
+    } catch (err) {
+      setError(err.message || "Failed to extract keywords");
+    } finally {
+      setLoading((s) => ({ ...s, keywords: false }));
+    }
+  };
 
-    const result = await extractKeywords(text);
-    setKeywords(result.keywords);
+  const runBoth = async () => {
+    await Promise.all([runSummarize(), runKeywords()]);
+  };
 
-    setLoadingKeywords(false);
+  const handleFile = async (file) => {
+    // Try to upload file to backend for text extraction (recommended for PDFs)
+    setError("");
+    try {
+      const res = await uploadFile(file);
+      if (res.text) setText(res.text);
+    } catch (err) {
+      setError(err.message || "File upload/extraction failed");
+    }
+  };
+
+  const clearAll = () => {
+    setText("");
+    setSummary("");
+    setKeywords([]);
+    setError("");
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center">
-      <h1 className="text-3xl font-bold mb-6">AI Summarizer & Keyword Extractor</h1>
-      
-      <div className="w-full max-w-3xl bg-white p-6 rounded-xl shadow-md">
-        <textarea
-          className="w-full p-3 border rounded-md focus:ring focus:ring-blue-300"
-          rows={8}
-          placeholder="Enter your text here..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
+    <div className="min-h-screen bg-gray-50 p-6 flex flex-col items-center">
+      <div className="w-full max-w-4xl">
+        <Header />
 
-        <div className="flex gap-4 mt-4">
-          <button
-            onClick={handleSummarize}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-          >
-            {loadingSummary ? "Summarizing..." : "Summarize"}
-          </button>
+        {error && <ErrorAlert message={error} />}
 
-          <button
-            onClick={handleKeywords}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
-          >
-            {loadingKeywords ? "Extracting..." : "Extract Keywords"}
-          </button>
+        <div className="bg-white rounded-xl shadow p-6 mt-6">
+          <FileUploader onFile={handleFile} />
+
+          <TextInput value={text} onChange={setText} />
+
+          <ActionButtons
+            onSummarize={() => runSummarize()}
+            onKeywords={() => runKeywords()}
+            onBoth={runBoth}
+            onClear={clearAll}
+            loadingSummary={loading.summary}
+            loadingKeywords={loading.keywords}
+            disabled={!text.trim()}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <SummaryBox summary={summary} />
+            <KeywordsBox keywords={keywords} />
+          </div>
         </div>
-
-        {summary && (
-          <div className="mt-6">
-            <h2 className="text-xl font-bold">Summary</h2>
-            <p className="mt-2 p-3 bg-gray-50 border rounded-md">{summary}</p>
-          </div>
-        )}
-
-        {keywords.length > 0 && (
-          <div className="mt-6">
-            <h2 className="text-xl font-bold">Keywords</h2>
-            <div className="flex gap-2 flex-wrap mt-2">
-              {keywords.map((kw, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-green-200 rounded-full text-green-800"
-                >
-                  {kw}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
-export default App;
