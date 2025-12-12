@@ -6,7 +6,8 @@ import SummaryBox from "./components/SummaryBox";
 import KeywordsBox from "./components/KeywordsBox";
 import ErrorAlert from "./components/ErrorAlert";
 import FileUploader from "./components/FileUploader";
-import { summarizeText, extractKeywords, uploadFile } from "./api";
+
+import { summarize, extractKeywords, uploadFile } from "./api";
 
 export default function App() {
   const [text, setText] = useState("");
@@ -15,31 +16,31 @@ export default function App() {
   const [loading, setLoading] = useState({ summary: false, keywords: false });
   const [error, setError] = useState("");
 
-  const runSummarize = async (inputText = text) => {
-    if (!inputText.trim()) return;
+  const runSummarize = async () => {
+    if (!text.trim()) return;
     setError("");
-    setLoading((s) => ({ ...s, summary: true }));
+    setLoading(s => ({ ...s, summary: true }));
     try {
-      const res = await summarizeText(inputText);
+      const res = await summarize(text);
       setSummary(res.summary || "");
     } catch (err) {
       setError(err.message || "Failed to summarize");
     } finally {
-      setLoading((s) => ({ ...s, summary: false }));
+      setLoading(s => ({ ...s, summary: false }));
     }
   };
 
-  const runKeywords = async (inputText = text) => {
-    if (!inputText.trim()) return;
+  const runKeywords = async () => {
+    if (!text.trim()) return;
     setError("");
-    setLoading((s) => ({ ...s, keywords: true }));
+    setLoading(s => ({ ...s, keywords: true }));
     try {
-      const res = await extractKeywords(inputText);
+      const res = await extractKeywords(text);
       setKeywords(res.keywords || []);
     } catch (err) {
       setError(err.message || "Failed to extract keywords");
     } finally {
-      setLoading((s) => ({ ...s, keywords: false }));
+      setLoading(s => ({ ...s, keywords: false }));
     }
   };
 
@@ -48,13 +49,12 @@ export default function App() {
   };
 
   const handleFile = async (file) => {
-    // Try to upload file to backend for text extraction (recommended for PDFs)
     setError("");
     try {
-      const res = await uploadFile(file);
-      if (res.text) setText(res.text);
+      const res = await uploadFile(file);   // Extract text only
+      if (res.text) setText(res.text);      // Fill textarea
     } catch (err) {
-      setError(err.message || "File upload/extraction failed");
+      setError(err.message || "File extraction failed");
     }
   };
 
@@ -78,8 +78,8 @@ export default function App() {
           <TextInput value={text} onChange={setText} />
 
           <ActionButtons
-            onSummarize={() => runSummarize()}
-            onKeywords={() => runKeywords()}
+            onSummarize={runSummarize}
+            onKeywords={runKeywords}
             onBoth={runBoth}
             onClear={clearAll}
             loadingSummary={loading.summary}
