@@ -1,14 +1,11 @@
-# app.py
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
 import pdfplumber
 import tempfile
 import os
 from PIL import Image
 import pytesseract
-
 from summarizer import Summarizer
 from key_extractor import KeywordExtractor
 
@@ -79,7 +76,8 @@ def extract_pdf_text(file: UploadFile):
 # ------------------ HOME ------------------
 @app.get("/")
 def home():
-    return {"message": "API is running!"}
+    return {"message": "API is running!" 
+    }
 
 
 # ------------------ SUMMARIZE ------------------
@@ -109,6 +107,6 @@ async def keywords(text: str = Form(None), file: UploadFile = File(None)):
 # ------------------ PDF Upload Only ------------------
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
-    """Extract text from PDF and return raw text (for Option B behavior)."""
+    """Extract text from PDF and return raw text"""
     extracted_text = extract_pdf_text(file)
     return {"text": extracted_text}
